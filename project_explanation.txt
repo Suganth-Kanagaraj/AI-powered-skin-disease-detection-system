@@ -1,0 +1,312 @@
+================================================================================
+AI-POWERED SKIN DISEASE DETECTION SYSTEM & MEDICAL ASSISTANT - PROJECT EXPLANATION
+================================================================================
+
+This document provides a comprehensive, highly detailed guide to the architecture,
+code organization, workflows, data schemas, machine learning pipeline, and deployment
+configurations of the AI-Powered Skin Disease Detection System.
+
+--------------------------------------------------------------------------------
+1. PROJECT MISSION & CORE OBJECTIVES
+--------------------------------------------------------------------------------
+The project is a full-stack, enterprise-grade medical assistant web application.
+It enables end-users (patients) to upload skin images, receive automated classification
+for potential skin diseases via deep learning models, view structured dashboard
+analytics, and download downloadable PDF medical reports. It also includes role-based
+administrative panels to monitor global scan statistics and aggregate metrics.
+
+Key Goals:
+  - High Performance: Low-latency REST API using FastAPI and asynchronous requests.
+  - Interactive Visuals: Responsive frontend utilizing React, Vite, Tailwind CSS, 
+    and Recharts.
+  - Robust Security: Secure authentication using Argon2 password hashing and 
+    JWT tokens with revocation (blacklist) logic.
+  - AI Inference: Flexible preprocessing and evaluation pipeline accommodating 
+    either real TensorFlow models or robust mock fallback mechanisms for development.
+  - Production Ready: Configured for multi-container deployment via Docker 
+    supporting relational (PostgreSQL) and document (MongoDB) databases.
+
+--------------------------------------------------------------------------------
+2. SYSTEM ARCHITECTURE OVERVIEW
+--------------------------------------------------------------------------------
+The project is composed of five principal sub-systems:
+
+  +-----------------------+      HTTP / JSON      +-----------------------+
+  |    React Frontend     | <===================> |    FastAPI Backend    |
+  |  (Vite, Tailwind,     |                       | (Argon2, SQLAlchemy,  |
+  |       Recharts)       |                       |       Jose JWT)       |
+  +-----------------------+                       +-----------------------+
+              ^                                               |
+              | Reverse Proxy                                 | Invokes
+              v                                               v
+  +-----------------------+                       +-----------------------+
+  |    Nginx Gateway      |                       |   AI Predictor Core   |
+  |                       |                       |  (TensorFlow Keras,   |
+  |                       |                       |       Pillow)         |
+  +-----------------------+                       +-----------------------+
+              |                                               |
+              +---------------+                               | Reads/Writes
+                              |                               v
+                              | Volumes / Links   +-----------------------+
+                              v                   |    Database Layer     |
+                  +-----------------------+       | (SQLite / PostgreSQL) |
+                  | Docker Compose Stack  | ===== |     (MongoDB Core)    |
+                  +-----------------------+       +-----------------------+
+
+  - Frontend: Single Page Application (SPA) built with React.js, compiled using Vite.
+    Handles user state, dashboard rendering, scan uploads, and report views.
+  - Backend: RESTful API built on FastAPI. Implements database sessions, core
+    business logic, validation schemas, and coordinates the ML inference steps.
+  - AI Inference Layer: Integrated within the backend. Preprocesses incoming uploads
+    using Pillow (PIL) and runs classification models built in TensorFlow.
+  - Model Training Sandbox: Separated from the backend to isolate training
+    datasets, requirements (e.g. CUDA acceleration), and experimental scripts.
+  - Deployment Infrastructure: Docker Compose configures multi-container setups for
+    backend, frontend, PostgreSQL, MongoDB, and Nginx reverse proxy.
+
+--------------------------------------------------------------------------------
+3. DIRECTORY TREE & DETAILED CODE ORGANIZATION
+--------------------------------------------------------------------------------
+
+The project root is structured as follows:
+
+[ROOT]
+├── README.md                     <- Quickstart instructions and main overview
+├── project_overview.txt          <- Brief architectural overview
+├── test_api.py                   <- End-to-end integration test suite
+├── ai-training/                  <- Sandbox for machine learning model training
+│   ├── requirements.txt          <- Independent training dependencies (TF/PyTorch)
+│   └── scripts/
+│       └── train.py              <- Model training script entrypoint
+├── backend/                      <- FastAPI backend application code
+│   ├── .env                      <- Local environment secrets (ignored by Git)
+│   ├── .env.example              <- Placeholder template for environment configs
+│   ├── Dockerfile                <- Container recipe for backend
+│   ├── requirements.txt          <- Main production dependencies
+│   ├── requirements-dev.txt      <- Developer dependencies (pytest, uvicorn, etc.)
+│   ├── test.db                   <- SQLite development database file
+│   ├── uploads/                  <- Directory storing uploaded skin scan images
+│   └── app/                      <- FastAPI application modules
+│       ├── main.py               <- App entrypoint; hooks routers, CORS, and DB init
+│       ├── ai/                   <- Machine Learning inference sub-module
+│       │   ├── predictor.py      <- Lazy TensorFlow model loader and classifier
+│       │   └── preprocess.py     <- Image normalizer and resize utility
+│       ├── api/                  <- Router controllers handling HTTP endpoints
+│       │   ├── admin.py          <- Global metrics dashboard (Admin-only)
+│       │   ├── auth.py           <- Registration, login, refresh, logout routes
+│       │   ├── dashboard.py      <- Metrics tailored to the logged-in patient
+│       │   ├── reports.py        <- Report persistence and PDF generation
+│       │   └── scan.py           <- Scan upload and scanning history
+│       ├── core/                 <- Base app configurations and helpers
+│       │   ├── config.py         <- Pydantic Settings class loader
+│       │   ├── database.py       <- SQLAlchemy engine, session maker, and Base model
+│       │   └── security.py       <- Password hashing (Argon2) and JWT helpers
+│       ├── models/               <- SQLAlchemy database mapping models
+│       │   ├── report.py         <- MedicalReport table definition
+│       │   ├── scan.py           <- SkinScan table definition
+│       │   ├── token_blacklist.py<- TokenBlacklist table for JWT revocation
+│       │   └── user.py           <- User (patient/admin) table definition
+│       ├── schemas/              <- Pydantic schemas validating input/outputs
+│       │   ├── auth_schema.py    <- Auth request/response validators
+│       │   ├── report_schema.py  <- Report payload and response models
+│       │   └── scan_schema.py    <- Scan output configurations
+│       ├── services/             <- Business logic layer
+│       │   ├── auth_service.py   <- Auth business logic
+│       │   ├── report_service.py <- Report query and generation layer
+│       │   └── scan_service.py   <- Database persistence layer for scans
+│       └── utils/                <- Core utility files
+│           └── pdf_generator.py  <- reportlab-driven PDF engine
+├── deployment/                   <- Deployment configurations
+│   ├── docker-compose.yml        <- Multi-service orchestration config
+│   └── nginx.conf                <- Reverse-proxy configuration routing / and /api/
+└── frontend/                     <- React.js single-page application
+    ├── index.html                <- HTML shell template
+    ├── package.json              <- UI dependencies (React, Recharts, Tailwind)
+    ├── vite.config.js            <- Vite bundling options
+    └── src/
+        ├── App.jsx               <- App component containing routes
+        ├── index.css             <- Tailwind directive entries and base custom styles
+        ├── main.jsx              <- React bootstrapper rendering DOM tree
+        ├── api/                  <- Service files calling FastAPI
+        │   ├── adminApi.js       <- Admin queries
+        │   ├── authApi.js        <- Login, signup, logout
+        │   ├── axios.js          <- Central Axios client config with JWT headers
+        │   ├── dashboardApi.js   <- Patient dashboard stats
+        │   ├── reportApi.js      <- Medical reports fetch/download
+        │   └── scanApi.js        <- File uploads and histories
+        ├── components/           <- Reusable modular UI components
+        │   ├── admin/            <- Charts and grids for admin panel
+        │   ├── dashboard/        <- Stat cards, charts, and history tables
+        │   ├── layout/           <- App Layout, navigation bar, sidebar
+        │   ├── report/           <- Medical reports detail cards
+        │   └── ui/               <- Base elements (buttons, inputs, status badges)
+        ├── context/              <- React Context modules
+        │   └── AuthContext.jsx   <- Global provider handling tokens & login states
+        ├── pages/                <- Route view components
+        │   ├── AdminPanel.jsx    <- Admin-specific analytics view
+        │   ├── Dashboard.jsx     <- Logged-in patient homepage
+        │   ├── Landing.jsx       <- Public portal homepage
+        │   ├── Login.jsx         <- User login screen
+        │   ├── Profile.jsx       <- User details view
+        │   ├── Register.jsx      <- Signup form
+        │   ├── Reports.jsx       <- Generated medical reports screen
+        │   ├── ScanHistory.jsx   <- Historical scan lists
+        │   ├── ScanPage.jsx      <- Image upload wizard
+        │   └── ScanResult.jsx    <- Classification results page
+        └── routes/               <- Routing configs
+            ├── AppRoutes.jsx     <- Route mappings and layouts
+            └── ProtectedRoute.jsx<- Navigation barrier preventing anonymous access
+
+--------------------------------------------------------------------------------
+4. DATABASE STRUCTURE & DATA MODELS
+--------------------------------------------------------------------------------
+The SQLite/PostgreSQL relational schema maps four primary tables:
+
+1) `users` table:
+   - `id` (INTEGER, Primary Key): Unique auto-increment identifier.
+   - `email` (VARCHAR, Unique, Indexed): User's registration email address.
+   - `hashed_password` (VARCHAR): Salted & hashed password using Argon2.
+   - `name` (VARCHAR): Optional display name of the user.
+   - `role` (VARCHAR, Default 'patient'): Denotes authority ('patient' or 'admin').
+   - `is_active` (BOOLEAN, Default True): Controls account activation.
+   - `is_admin` (BOOLEAN, Default False): Shortcut boolean for administrator access.
+   - `created_at` (DATETIME): Server default timestamp when record is inserted.
+
+2) `skin_scans` table:
+   - `id` (INTEGER, Primary Key): Unique identifier.
+   - `user_id` (INTEGER, Foreign Key -> `users.id` with CASCADE deletion): User
+     who uploaded the scan.
+   - `filename` (VARCHAR): Unique stored filename on filesystem (UUID-generated).
+   - `disease` (VARCHAR, Nullable): Disease name outputted by ML model.
+   - `confidence` (FLOAT, Nullable): Model prediction confidence percentage.
+   - `severity` (VARCHAR, Nullable): Categorized severity ('Mild', 'Moderate', 'Severe').
+   - `meta_data` (JSON, Nullable): Raw classification payload (e.g. predictions, probabilities).
+   - `created_at` (DATETIME): Scan timestamp.
+
+3) `medical_reports` table:
+   - `id` (INTEGER, Primary Key): Unique identifier.
+   - `user_id` (INTEGER, Foreign Key -> `users.id` with CASCADE): Report owner.
+   - `scan_id` (INTEGER, Foreign Key -> `skin_scans.id`): Associated scan image.
+   - `disease` (VARCHAR, Nullable): Skin disease diagnosis.
+   - `confidence` (FLOAT, Nullable): Diagnosis confidence level.
+   - `severity` (VARCHAR, Nullable): Disease severity category.
+   - `symptoms` (JSON, Nullable): List of common symptoms associated with disease.
+   - `recommendations` (JSON, Nullable): Guidelines and treatment advice.
+   - `medicines` (JSON, Nullable): Recommended medicines or clinical actions.
+   - `created_at` (DATETIME): Report creation timestamp.
+
+4) `token_blacklist` table:
+   - `id` (INTEGER, Primary Key): Unique identifier.
+   - `token` (VARCHAR, Unique, Indexed): Invalidated JWT token.
+   - `user_id` (INTEGER): Associated user who logged out.
+   - `blacklisted_at` (DATETIME): Server timestamp when the token was invalidated.
+   - `expires_at` (DATETIME): Optional expiration date after which the token can 
+     be cleared from db.
+
+--------------------------------------------------------------------------------
+5. DETAILED SYSTEM WORKFLOWS
+--------------------------------------------------------------------------------
+
+A. Authentication and Session Management
+   - Sign Up: User registers via `POST /api/auth/register` with email, password,
+     and name. `auth_service.py` hashes the password using `argon2-cffi`. An access
+     token (expires in 20 min) and a refresh token (expires in 7 days) are generated 
+     using HMAC SHA256 signing (`jose`).
+   - Sign In: User submits credentials via `POST /api/auth/login`. Credentials are
+     validated by verifying the hash. New JWT tokens are returned.
+   - Authorized Requests: The Axios interceptor grabs the `access_token` from
+     localStorage and appends it as `Authorization: Bearer <token>` to headers.
+   - Revocation & Logout: User requests logout. The client calls `POST /api/auth/logout`.
+     The current token is read from headers and written to the `token_blacklist` database
+     table. Subsequent middleware checks all headers against the blacklist table and 
+     rejects blacklisted requests with 401 Unauthorized status.
+   - Token Refresh: If the access token expires, the client sends the refresh token
+     to `POST /api/auth/refresh` to get a fresh access token without forcing a relogin.
+
+B. Image Upload and Classification Pipeline
+   - Image Upload: The patient navigates to `/scan` and uploads a skin picture.
+     The frontend sends the binary payload via `multipart/form-data` to `POST /api/scan/upload`.
+   - File Storage: `backend/app/api/scan.py` receives the file, generates a random UUID
+     filename, and saves it locally in `backend/uploads/`.
+   - Preprocessing: `backend/app/ai/preprocess.py` processes the file path. Using
+     Pillow, it:
+       1) Converts the file to an RGB image.
+       2) Resizes the image to 224x224 (the default input size for standard architectures like ResNet/MobileNet).
+       3) Normalizes pixels to [0, 1] scale by dividing by 255.0.
+       4) Adds a batch dimension (converting shape from [224, 224, 3] to [1, 224, 224, 3]).
+   - Inference Core: `backend/app/ai/predictor.py` attempts a lazy import of TensorFlow
+     and loads a local Keras model file (`skin_model.h5`) if available.
+       - IF Keras model loads successfully: The image is classified, output labels
+         are fetched from `disease_labels.json`, and predictions are calculated.
+       - IF TensorFlow or the model is missing (development fallback): It defaults 
+         to a deterministic mock prediction object ('Unknown' disease class, 
+         50.0% confidence, 'Unknown' severity, and empty lists).
+   - Data Record creation: The backend saves the scan details in `skin_scans` table and
+     returns a JSON containing scan details to the frontend.
+
+C. Report Management and PDF Generation
+   - Creation: A REST call to `POST /api/reports/` commits a new diagnosis record.
+   - Download: Clicking 'Download' calls `GET /api/reports/{id}/download`.
+   - Generation: The backend reads the report data, fetches user details, and calls
+     `generate_simple_report` in `backend/app/utils/pdf_generator.py`.
+     - Uses `reportlab` canvas to build the PDF document byte-stream.
+     - Fallback: If `reportlab` is not installed on the system, the function
+       simply encodes the report dictionary into plain text bytes to avoid crashing.
+     - The byte stream is sent back as a `StreamingResponse` with `application/pdf`
+       mimetype and `Content-Disposition: attachment`.
+
+D. Dashboards & Analytics
+   - Patient Dashboard: Retrieves scan metrics, reports counts, recent activity tables,
+     and aggregations of disease types via `GET /api/dashboard/stats`. React parses this
+     response and graphs it using Recharts components (`DiseaseChart`, `ActivityChart`).
+   - Admin panel: Restricted via `require_admin` dependency checking `user.is_admin` 
+     or `user.role == 'admin'`. Calls `GET /api/admin/analytics` to pull statistics across
+     all registered users.
+
+--------------------------------------------------------------------------------
+6. TEST SUITE & VERIFICATION SUITE
+--------------------------------------------------------------------------------
+The root file `test_api.py` acts as a complete automated test runner. It tests:
+  - Account signup and registration constraints.
+  - Profile retrieval using authorization tokens.
+  - Login mechanisms.
+  - Token refresh actions.
+  - Dashboard stats requests.
+  - Fetching user histories.
+  - Fetching generated reports.
+  - Authorization blocking on admin routes.
+  - Logout and token blacklist checking (guaranteeing that a token cannot be reused).
+  - Validation failures on wrong credentials.
+
+You can run this test suite when the backend server is running by invoking:
+  python test_api.py
+
+--------------------------------------------------------------------------------
+7. CONTAINERIZATION & DEPLOYMENT SPECS
+--------------------------------------------------------------------------------
+The system is ready for single-command orchestration using Docker Compose:
+
+- Backend container:
+  - Uses `backend/Dockerfile` to spin up a Python environment.
+  - Mounts local directory `./backend/app` into container `/app/app` for live coding.
+  - Binds to port `8000`.
+
+- Frontend container:
+  - Compiles the React assets and serves them.
+  - Binds to port `5173`.
+
+- Postgres container:
+  - Relational SQL engine (PostgreSQL 15).
+  - Binds to port `5432` with pre-defined user, password, and database.
+
+- MongoDB container:
+  - Document database engine (MongoDB 6).
+  - Binds to port `27017`.
+
+- Nginx reverse proxy:
+  - Implements route matching.
+  - Routes root `/` request to `localhost:5173` (Frontend).
+  - Routes API `/api/` traffic directly to `backend:8000/` (FastAPI).
+
+================================================================================
+EOF
