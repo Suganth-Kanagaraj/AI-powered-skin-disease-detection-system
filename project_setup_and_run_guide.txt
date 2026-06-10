@@ -1,0 +1,153 @@
+================================================================================
+DermAI - AI-Powered Skin Disease Detection & Medical Assistant
+SETUP AND RUNNING GUIDE
+================================================================================
+
+This guide outlines the step-by-step instructions for configuring, installing dependencies,
+and running the DermAI application locally (with SQLite) or using Docker Compose.
+
+--------------------------------------------------------------------------------
+1. PREREQUISITES
+--------------------------------------------------------------------------------
+Before setting up the project, make sure the following are installed:
+  - Python (Version 3.10 or higher - tested on 3.13)
+  - Node.js (Version 18.x or higher) and npm
+  - Git
+
+--------------------------------------------------------------------------------
+2. ENVIRONMENT CONFIGURATION
+--------------------------------------------------------------------------------
+Configure local environment files before launching:
+
+A. Backend configuration:
+   - Location: `backend/.env`
+   - Copy `backend/.env.example` to `backend/.env`:
+     `cp backend/.env.example backend/.env`
+   - Verify variables inside `.env`:
+     DATABASE_URL=sqlite:///./test.db
+     MONGODB_URI=mongodb://localhost:27017/ai_skin
+     SECRET_KEY=dev-secret-key
+     ACCESS_TOKEN_EXPIRE_MINUTES=60
+
+B. Frontend configuration:
+   - Location: `frontend/.env`
+   - Verify variables inside `.env`:
+     VITE_API_URL=http://localhost:8000/api
+
+--------------------------------------------------------------------------------
+3. BACKEND (FastAPI) SETUP
+--------------------------------------------------------------------------------
+Follow these commands to configure the Python backend server:
+
+1. Navigate to the backend directory:
+   `cd backend`
+
+2. Create a virtual environment:
+   `python -m venv .venv`
+
+3. Activate the virtual environment:
+   - Windows PowerShell:
+     `.venv\Scripts\Activate.ps1`
+   - Windows Command Prompt (CMD):
+     `.venv\Scripts\activate.bat`
+   - macOS / Linux Terminal:
+     `source .venv/bin/activate`
+
+4. Install Python Dependencies:
+   - Note on Python 3.13 compatibility: Standard requirements file installs packages like
+     `psycopg2-binary` and `uvicorn[standard]` (which pulls in `pyyaml`). On Python 3.13
+     without pre-compiled wheels, these may fail compiling from source.
+   
+   - If running locally with SQLite database, install the wheel-based packages directly:
+     `pip install fastapi uvicorn python-jose sqlalchemy alembic python-dotenv reportlab python-multipart pydantic-settings passlib argon2-cffi numpy`
+
+5. Initialize the Database:
+   - The SQLite database tables are generated automatically when the FastAPI app starts up.
+     No manual migrations are required to get started.
+
+6. Run the Backend Server:
+   `uvicorn app.main:app --host 127.0.0.1 --port 8000`
+   
+   - Status check: Verify output prints "Uvicorn running on http://127.0.0.1:8000".
+
+--------------------------------------------------------------------------------
+4. FRONTEND (React + Vite + Tailwind CSS) SETUP
+--------------------------------------------------------------------------------
+Follow these commands to configure the UI web interface:
+
+1. Navigate to the frontend directory:
+   `cd frontend`
+
+2. Install Project Dependencies:
+   `npm install`
+
+3. Install layout and iconography dependencies:
+   `npm install lucide-react`
+
+4. Tailwind Styling Core Configuration:
+   - Make sure `postcss` and `autoprefixer` are installed:
+     `npm install -D postcss autoprefixer`
+   
+   - Verify `tailwind.config.js` has the correct source paths:
+     ```javascript
+     module.exports = {
+       content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+       theme: { extend: {} },
+       plugins: [],
+     }
+     ```
+   
+   - Verify `postcss.config.js` registers the Tailwind parser:
+     ```javascript
+     module.exports = {
+       plugins: {
+         tailwindcss: {},
+         autoprefixer: {},
+       },
+     }
+     ```
+
+5. Run the Frontend Development Server:
+   `npm run dev`
+
+   - Status check: Verify output prints "Local: http://localhost:5173/".
+
+--------------------------------------------------------------------------------
+5. VERIFYING THE APPLICATION
+--------------------------------------------------------------------------------
+
+A. Web Access:
+   - Open your web browser and go to: http://localhost:5173
+   - Sign up or log in to view the interactive charts, file uploader, and chatbots.
+
+B. API Playground & Documentation:
+   - Open your browser and go to: http://localhost:8000/docs
+   - This provides the interactive Swagger UI to review and trigger endpoints.
+
+C. Automated End-to-End Tests:
+   - Ensure the backend server is running on port 8000.
+   - Run the integration test suite in the root folder:
+     `python test_api.py`
+   - This checks registration, login, token refresh, dashboard stats, reports,
+     and logout blacklist revocations.
+
+--------------------------------------------------------------------------------
+6. PRODUCTION DEPLOYMENT (DOCKER COMPOSE)
+--------------------------------------------------------------------------------
+For a full multi-container deployment (including PostgreSQL and MongoDB databases):
+
+1. Make sure Docker and Docker Desktop are running.
+2. From the root directory, start the containers:
+   `docker compose up -d`
+3. This spins up:
+   - `backend` on port `8000` (FastAPI)
+   - `frontend` on port `5173` (React/Vite)
+   - `db` on port `5432` (PostgreSQL 15)
+   - `mongo` on port `27017` (MongoDB 6)
+   - `Nginx` on port `80` acting as a reverse routing proxy.
+
+To stop the containers:
+   `docker compose down`
+
+================================================================================
+EOF
