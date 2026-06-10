@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from .config import settings
 from app.models import user as user_model
+from app.models.token_blacklist import TokenBlacklist
 from app.core.database import SessionLocal
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -50,6 +51,12 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     except JWTError:
         raise credentials_exception
     db = SessionLocal()
+    
+    # Check if token is blacklisted
+    if db.query(TokenBlacklist).filter(TokenBlacklist.token == token).first():
+        db.close()
+        raise credentials_exception
+    
     user = get_user(db, user_id)
     db.close()
     if user is None:

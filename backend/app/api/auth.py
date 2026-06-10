@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.schemas.auth_schema import UserCreate, LoginIn, Token, UserOut
-from app.services.auth_service import create_user, authenticate_user, create_tokens_for_user, get_user_by_email
+from app.services.auth_service import create_user, authenticate_user, create_tokens_for_user, get_user_by_email, blacklist_token
 from app.core.security import get_current_user
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -56,3 +56,25 @@ def refresh(token: dict, db: Session = Depends(get_db)):
 @router.get('/me', response_model=UserOut)
 def me(user = Depends(get_current_user)):
     return user
+
+
+@router.post('/logout')
+def logout(request: Request, user = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Blacklist the current token for logout"""
+    # Extract token from Authorization header
+    auth_header = request.headers.get('authorization')
+    if not auth_header:
+        raise HTTPException(status_code=401, detail='Missing authorization header')
+    
+    try:
+        scheme, token = auth_header.split()
+        if scheme.lower() != 'bearer':
+            raise ValueError("Invalid scheme")
+    except ValueError:
+        raise HTTPException(status_code=401, detail='Invalid authorization header')
+    
+    # Blacklist the token
+    blacklist_token(db, token, user.id)
+    
+    return {"message": "Logged out successfully"}
+

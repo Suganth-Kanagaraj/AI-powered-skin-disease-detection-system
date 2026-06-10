@@ -2,6 +2,7 @@ from datetime import timedelta
 from typing import Optional
 from sqlalchemy.orm import Session
 from app.models.user import User
+from app.models.token_blacklist import TokenBlacklist
 from app.core.security import get_password_hash, verify_password, create_access_token
 from app.schemas.auth_schema import UserCreate
 
@@ -41,3 +42,16 @@ def create_tokens_for_user(user: User):
     access_token = create_access_token({"sub": str(user.id)}, expires_delta=timedelta(minutes=ACCESS_EXPIRE_MINUTES))
     refresh_token = create_access_token({"sub": str(user.id)}, expires_delta=timedelta(days=REFRESH_EXPIRE_DAYS))
     return access_token, refresh_token
+
+
+def blacklist_token(db: Session, token: str, user_id: int, expires_at=None):
+    """Blacklist a refresh token for logout"""
+    bl = TokenBlacklist(token=token, user_id=user_id, expires_at=expires_at)
+    db.add(bl)
+    db.commit()
+    return bl
+
+
+def is_token_blacklisted(db: Session, token: str) -> bool:
+    """Check if a token has been blacklisted"""
+    return db.query(TokenBlacklist).filter(TokenBlacklist.token == token).first() is not None

@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect } from 'react'
 import api from '../api/axios'
 import { useNavigate } from 'react-router-dom'
+import { logout as callLogoutApi } from '../api/authApi'
 
 export const AuthContext = createContext(null)
 
@@ -50,7 +51,15 @@ export function AuthProvider({ children }){
     return me.data
   }
 
-  const logout = () =>{
+  const logout = async () =>{
+    try {
+      // Call logout API to blacklist the token
+      await callLogoutApi()
+    } catch (err) {
+      // Continue logout even if API call fails
+      console.warn('Logout API call failed:', err)
+    }
+    
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
     delete api.defaults.headers.common['Authorization']
