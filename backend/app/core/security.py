@@ -11,7 +11,7 @@ from app.models import user as user_model
 from app.models.token_blacklist import TokenBlacklist
 from app.core.database import SessionLocal
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 SECRET_KEY = getattr(settings, 'secret_key', 'CHANGEME')

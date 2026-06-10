@@ -1,32 +1,31 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 
 class UserCreate(BaseModel):
-    email: EmailStr
+    email: str
     password: str
-    name: Optional[str]
+    name: Optional[str] = None
 
 
 class UserOut(BaseModel):
     id: int
-    email: EmailStr
-    name: Optional[str]
+    email: str
+    name: Optional[str] = None
     role: str
     is_active: bool
     is_admin: bool
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LoginIn(BaseModel):
-    email: EmailStr
+    email: str
     password: str
 
 
 class Token(BaseModel):
     access_token: str
-    refresh_token: Optional[str]
+    refresh_token: Optional[str] = None
     token_type: str = "bearer"
 
 

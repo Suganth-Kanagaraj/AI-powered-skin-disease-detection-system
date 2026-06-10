@@ -20,7 +20,7 @@ export default function RecentScansTable({ scans = [] }){
             <td className="px-4 py-2">{s.disease}</td>
             <td className="px-4 py-2">{s.confidence}</td>
             <td className="px-4 py-2">{new Date(s.created_at).toLocaleString()}</td>
-            <td className="px-4 py-2">{s.metadata && s.metadata.report_id ? <DownloadPDF reportId={s.metadata.report_id} /> : '-'}</td>
+            <td className="px-4 py-2">{s.meta_data && s.meta_data.report_id ? <DownloadPDF reportId={s.meta_data.report_id} /> : '-'}</td>
           </tr>
         ))}
       </tbody>

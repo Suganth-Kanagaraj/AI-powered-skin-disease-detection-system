@@ -1,12 +1,13 @@
-from pydantic import BaseModel
-from typing import Optional, Any
+from pydantic import BaseModel, ConfigDict
+from typing import Optional, Any, List
+from datetime import datetime
 
 class ScanCreate(BaseModel):
     filename: str
-    disease: Optional[str]
-    confidence: Optional[float]
-    severity: Optional[str]
-    metadata: Optional[Any]
+    disease: Optional[str] = None
+    confidence: Optional[float] = None
+    severity: Optional[str] = None
+    meta_data: Optional[Any] = None
 
 class ScanOut(BaseModel):
     id: int
@@ -14,7 +15,7 @@ class ScanOut(BaseModel):
     disease: Optional[str]
     confidence: Optional[float]
     severity: Optional[str]
-    metadata: Optional[Any]
+    meta_data: Optional[Any]
+    created_at: Optional[datetime] = None
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
