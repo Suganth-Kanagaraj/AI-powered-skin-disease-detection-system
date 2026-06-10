@@ -1,33 +1,106 @@
 import React, { useState, useContext } from 'react'
 import { AuthContext } from '../context/AuthContext'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
+import { Mail, Lock, User, Activity, ArrowRight, Loader2 } from 'lucide-react'
 
 export default function Register(){
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
+  const [loading, setLoading] = useState(false)
   const { register } = useContext(AuthContext)
   const navigate = useNavigate()
 
   const handle = async (e) =>{
     e.preventDefault()
+    if (!email || !password || !name) return
+    setLoading(true)
     try{
       await register({ email, password, name })
       navigate('/dashboard')
     }catch(err){
-      alert('Registration failed')
+      console.error(err)
+      alert('Registration failed. Email might already be registered.')
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <div className="p-4 max-w-md mx-auto">
-      <h2 className="text-2xl mb-4">Register</h2>
-      <form onSubmit={handle}>
-        <input className="w-full p-2 mb-2" placeholder="Full name" value={name} onChange={e=>setName(e.target.value)} />
-        <input className="w-full p-2 mb-2" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} />
-        <input className="w-full p-2 mb-2" placeholder="Password" type="password" value={password} onChange={e=>setPassword(e.target.value)} />
-        <button className="btn">Register</button>
-      </form>
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+      <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-xl shadow-slate-100/40 w-full max-w-md space-y-6">
+        {/* Brand logo */}
+        <div className="flex flex-col items-center text-center space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-teal-500 flex items-center justify-center text-white shadow-lg shadow-teal-500/20">
+            <Activity className="w-7 h-7 stroke-[2.5]" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-slate-800 tracking-tight">Create Account</h2>
+            <p className="text-xs text-slate-400 font-semibold mt-1">Get started with AI skin monitoring</p>
+          </div>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handle} className="space-y-4">
+          <div className="relative">
+            <User className="absolute left-4 top-3.5 w-4 h-4 text-slate-400" />
+            <input 
+              className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-semibold text-slate-700 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#1aa4a4] transition-all duration-150" 
+              placeholder="Full name" 
+              required
+              value={name} 
+              onChange={e=>setName(e.target.value)} 
+            />
+          </div>
+          <div className="relative">
+            <Mail className="absolute left-4 top-3.5 w-4 h-4 text-slate-400" />
+            <input 
+              className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-semibold text-slate-700 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#1aa4a4] transition-all duration-150" 
+              placeholder="Email address" 
+              type="email"
+              required
+              value={email} 
+              onChange={e=>setEmail(e.target.value)} 
+            />
+          </div>
+          <div className="relative">
+            <Lock className="absolute left-4 top-3.5 w-4 h-4 text-slate-400" />
+            <input 
+              className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-semibold text-slate-700 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#1aa4a4] transition-all duration-150" 
+              placeholder="Password" 
+              type="password" 
+              required
+              value={password} 
+              onChange={e=>setPassword(e.target.value)} 
+            />
+          </div>
+
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full py-3.5 bg-[#1aa4a4] text-white font-bold rounded-xl shadow-lg shadow-teal-500/10 hover:bg-[#158787] hover:shadow-xl transition-all duration-200 disabled:opacity-50 flex items-center justify-center space-x-2 text-sm"
+          >
+            {loading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <>
+                <span>Sign Up</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
+        </form>
+
+        {/* Footer link */}
+        <div className="text-center pt-2">
+          <p className="text-xs text-slate-400 font-semibold">
+            Already have an account?{' '}
+            <Link to="/login" className="text-[#1aa4a4] hover:text-[#158787] font-bold transition-colors">
+              Sign In
+            </Link>
+          </p>
+        </div>
+      </div>
     </div>
   )
 }
