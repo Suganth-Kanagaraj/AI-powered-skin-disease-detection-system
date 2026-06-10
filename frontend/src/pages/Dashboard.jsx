@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { getDashboardStats } from '../api/dashboardApi'
 import StatCard from '../components/dashboard/StatCard'
 import RecentScansTable from '../components/dashboard/RecentScansTable'
+import DiseaseChart from '../components/dashboard/DiseaseChart'
+import ActivityChart from '../components/dashboard/ActivityChart'
 
 export default function Dashboard(){
   const [stats, setStats] = useState(null)
@@ -19,6 +21,11 @@ export default function Dashboard(){
         <StatCard title="Total Scans" value={stats.total_scans} />
         <StatCard title="Total Reports" value={stats.total_reports} />
         <StatCard title="Distinct Diseases" value={stats.disease_distribution ? stats.disease_distribution.length : 0} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-6 mb-6">
+        <DiseaseChart data={stats.disease_distribution || []} />
+        <ActivityChart scans={stats.recent_scans || []} />
       </div>
 
       <div className="mb-6">
